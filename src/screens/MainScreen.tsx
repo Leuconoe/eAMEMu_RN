@@ -63,16 +63,32 @@ const CardList = (props: { cards: Card[] }) => {
   const toggleHcef = useCallback(
     async (index: number) => {
       const card = cards[index];
-      if (enabledCardIndex === index) {
-        // disable
-        await Hcef.disableService();
-        setEnabledCardIndex(null);
-      } else {
-        await Hcef.enableService(card.sid);
-        setEnabledCardIndex(index);
+      try {
+        if (enabledCardIndex === index) {
+          // disable
+          await Hcef.disableService();
+          setEnabledCardIndex(null);
+        } else {
+          await Hcef.enableService(card.sid);
+          setEnabledCardIndex(index);
+        }
+      } catch (e) {
+        const err = e as { code?: string; message?: string };
+        // Android requires the HCE-F NFCID2 to start with "02FE"; a card whose
+        // SID does not is rejected by setNfcid2ForService.
+        const body =
+          err.code === 'SET_NFCID2_FAIL'
+            ? t('alert.body.card_nfcid2_fail')
+            : t('alert.body.card_toggle_fail', {
+                reason: err.message ?? String(e),
+              });
+
+        Alert.alert(t('alert.title.error'), body, [
+          { text: t('alert.button.confirm') },
+        ]);
       }
     },
-    [cards, enabledCardIndex],
+    [cards, enabledCardIndex, t],
   );
 
   const queryClient = useQueryClient();

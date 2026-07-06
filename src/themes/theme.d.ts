@@ -19,6 +19,8 @@ declare module 'styled-components/native' {
       gray200: string;
 
       disabled: string;
+      error: string;
+      warning: string;
     };
   }
 }

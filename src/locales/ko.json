@@ -12,7 +12,9 @@
     "body": {
       "hcef_not_support": "이 기기는 HCE-F를 지원하지 않습니다. 다른 기기로 다시 시도해 주세요.",
       "hcef_init_fail": "HCE-F 초기 설정에 실패했습니다.\n앱을 종료한 뒤, NFC를 활성화하고 다시 실행해 주세요.",
-      "card_remove": "\"{{cardName}}\" 카드를 삭제하시겠습니까?"
+      "card_remove": "\"{{cardName}}\" 카드를 삭제하시겠습니까?",
+      "card_toggle_fail": "카드 활성화에 실패했습니다.\n({{reason}})",
+      "card_nfcid2_fail": "이 카드는 에뮬레이션할 수 없습니다.\nHCE-F 카드 번호(NFCID2)는 02FE로 시작해야 합니다. 무작위 생성으로 만든 카드를 사용해 주세요."
     },
     "button": {
       "confirm": "확인",
@@ -35,7 +37,9 @@
     "card_preview": "카드 미리보기",
     "card_name": "카드 이름",
     "card_number": "카드 번호",
-    "change_card_number": "카드 번호 변경",
+    "card_number_placeholder": "카드에 인쇄된 16자리 번호 입력",
+    "card_not_emulatable": "⚠️ 이 카드는 활성화(에뮬레이션)할 수 없습니다. NFCID2가 02FE로 시작하는 카드만 사용할 수 있습니다.",
+    "change_card_number": "무작위 번호 생성",
     "save": "저장"
   }
 }

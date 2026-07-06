@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -61,6 +61,18 @@ const FieldBottomBorder = styled.View<{ focused: boolean }>`
   height: ${props => (props.focused ? 2 : 1)}px;
 `;
 
+const FieldErrorText = styled(Text)`
+  padding-top: 4px;
+  font-size: 12px;
+  color: ${props => props.theme.colors.error};
+`;
+
+const FieldWarningText = styled(Text)`
+  padding-top: 4px;
+  font-size: 12px;
+  color: ${props => props.theme.colors.warning};
+`;
+
 const StyledTextInput = styled.TextInput`
   font-size: 16px;
   padding-top: 4px;
@@ -75,6 +87,7 @@ const ButtonContainer = styled.TouchableOpacity`
   background-color: ${props => props.theme.colors.primary};
   justify-content: center;
   align-items: center;
+  opacity: ${props => (props.disabled ? 0.5 : 1)};
 `;
 
 const ButtonText = styled.Text`
@@ -149,29 +162,71 @@ const CardEditScreen = (props: CardAddScreenProps | CardEditScreenProps) => {
   });
 
   const [cardName, setCardName] = useState<string>(initialData?.name ?? 'eAM');
+
+  // cardNumber holds the SID (internal 16-hex identifier). It is the single
+  // source of truth used for saving and for the preview card.
   const [cardNumber, setCardNumber] = useState<string>(() => {
     return initialData?.sid ?? generateRandomCardNumber();
   });
+
+  // konamiDraft is the KONAMI ID (the number printed on the card) the user
+  // edits. It is kept in sync with cardNumber (SID) through convertSID.
+  const [konamiDraft, setKonamiDraft] = useState<string>('');
+  const [konamiValid, setKonamiValid] = useState<boolean>(true);
+  // Whether the current konamiDraft has been seeded from the SID yet. Reset to
+  // false when the SID changes externally (e.g. random generation) so the
+  // draft re-syncs; stays true while the user is typing so we never overwrite
+  // their input.
+  const seeded = useRef<boolean>(false);
+
   const uid = useQuery(['uid', cardNumber], () =>
     CardConv.convertSID(cardNumber),
   );
 
-  const styledUid = useMemo(() => {
-    if (!uid.isSuccess) {
-      return t('card_edit.loading_card_number');
+  // Seed the editable KONAMI ID from the SID-derived value once it resolves.
+  useEffect(() => {
+    if (uid.isSuccess && !seeded.current) {
+      setKonamiDraft(uid.data);
+      setKonamiValid(true);
+      seeded.current = true;
     }
-
-    return (
-      uid.data.match(/[A-Za-z0-9]{4}/g)?.join(' - ') ??
-      t('card_edit.invalid_card_number')
-    );
-  }, [t, uid]);
+  }, [uid.isSuccess, uid.data]);
 
   const onChangeCardName = useCallback((s: string) => {
     setCardName(s);
   }, []);
 
+  const applyKonami = useCallback(async (draft: string) => {
+    try {
+      const sid = await CardConv.convertKonamiID(draft);
+      setCardNumber(sid);
+      setKonamiValid(true);
+    } catch {
+      setKonamiValid(false);
+    }
+  }, []);
+
+  const onChangeKonami = useCallback(
+    (text: string) => {
+      const normalized = text
+        .toUpperCase()
+        .replace(/[^0-9A-Z]/g, '')
+        .slice(0, 16);
+      setKonamiDraft(normalized);
+
+      if (normalized.length === 16) {
+        applyKonami(normalized);
+      } else {
+        setKonamiValid(false);
+      }
+    },
+    [applyKonami],
+  );
+
   const changeCardNumber = useCallback(() => {
+    // Re-seed the draft from the newly generated SID.
+    seeded.current = false;
+    setKonamiValid(true);
     setCardNumber(generateRandomCardNumber());
   }, []);
 
@@ -247,13 +302,28 @@ const CardEditScreen = (props: CardAddScreenProps | CardEditScreenProps) => {
         <View style={styles.fieldItemContainer}>
           <TextField
             title={t('card_edit.card_number')}
-            value={styledUid}
-            editable={false}
+            value={konamiDraft}
+            onChangeText={onChangeKonami}
+            placeholder={t('card_edit.card_number_placeholder')}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={16}
           />
+          {!konamiValid && (
+            <FieldErrorText>
+              {t('card_edit.invalid_card_number')}
+            </FieldErrorText>
+          )}
+          {konamiValid &&
+            konamiDraft.length === 16 &&
+            !cardNumber.toUpperCase().startsWith('02FE') && (
+              <FieldWarningText>
+                {t('card_edit.card_not_emulatable')}
+              </FieldWarningText>
+            )}
           <Button
             containerStyle={styles.cardNumberChangeButton}
             onPress={changeCardNumber}
-            disabled={!uid.isSuccess}
             text={t('card_edit.change_card_number')}
           />
         </View>
@@ -261,6 +331,7 @@ const CardEditScreen = (props: CardAddScreenProps | CardEditScreenProps) => {
         <Button
           onPress={save}
           containerStyle={styles.saveButton}
+          disabled={!konamiValid || konamiDraft.length !== 16}
           text={t('card_edit.save')}
         />
       </ScrollView>

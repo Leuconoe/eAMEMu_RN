@@ -16,6 +16,8 @@ const LightTheme = {
     gray200: '#EEEEEE',
 
     disabled: 'rgba(0, 0, 0, 0.5)',
+    error: '#d32f2f',
+    warning: '#e08600',
   },
 };
 

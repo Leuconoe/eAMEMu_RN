@@ -16,6 +16,8 @@ const DarkTheme = {
     gray200: '#EEEEEE',
 
     disabled: 'rgba(255, 255, 255, 0.5)',
+    error: '#ef5350',
+    warning: '#ffb74d',
   },
 };
 
